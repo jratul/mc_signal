@@ -46,47 +46,63 @@ set<string> word_list;
 string buf;
 int word_split_num;
 pthread_mutex_t my_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+bool thread_done[NUM_THREAD];
 
 void* ThreadFunc(void* arg) {
 	long tid = (long)arg;
 
-	if((size_t)tid >= word_list.size()) {
-		return NULL;
-	}
-
-	if((size_t)tid * word_split_num >= word_list.size()) {
-		return NULL;
-	}
-
-	set<string>::iterator start_iter = word_list.begin();
-	set<string>::iterator end_iter;
-	set<string>::iterator it;
-    multimap<MyKey, string, MyKeyCompare> thread_result;
-
-	advance(start_iter, tid * word_split_num);
-	end_iter = start_iter;
-	advance(end_iter, word_split_num);
-
-	//cout << "this is thread : " << tid << endl;
-
-	if(tid == NUM_THREAD -1 || (word_list.size()) < (((size_t)tid+1) * word_split_num)) {
-		end_iter = word_list.end();
-	}
-
-	for(it = start_iter; it != end_iter; it++) {
-		size_t startNum = buf.find(*it);
-
-        	if (startNum != string::npos){
-        		size_t endNum = startNum + (*it).length();        	   
-	            thread_result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
-	        }
-	}
-
     pthread_mutex_lock(&my_mutex);
-    for(multimap<MyKey, string, MyKeyCompare>::iterator mit = thread_result.begin(); mit != thread_result.end(); mit++) {
-        result.insert(make_pair(MyKey((mit->first).getStartNum(), (mit->first).getEndNum()), mit->second));
-    }
+    thread_done[tid] = false;
+    pthread_cond_wait(&cond, &my_mutex);
     pthread_mutex_unlock(&my_mutex);
+
+	if((size_t)tid >= word_list.size() ||
+        (size_t)tid * word_split_num >= word_list.size()) {
+        pthread_mutex_lock(&my_mutex);
+        thread_done[tid] = true;
+        pthread_cond_wait(&cond, &my_mutex);
+        pthread_mutex_unlock(&my_mutex);
+		return NULL;
+	}
+
+    while(1) {
+    	set<string>::iterator start_iter = word_list.begin();
+    	set<string>::iterator end_iter;
+    	set<string>::iterator it;
+        multimap<MyKey, string, MyKeyCompare> thread_result;
+
+    	advance(start_iter, tid * word_split_num);
+    	end_iter = start_iter;
+    	advance(end_iter, word_split_num);
+
+    	//cout << "this is thread : " << tid << endl;
+
+    	if(tid == NUM_THREAD -1 || (word_list.size()) < (((size_t)tid+1) * word_split_num)) {
+    		end_iter = word_list.end();
+    	}
+
+    	for(it = start_iter; it != end_iter; it++) {
+    		size_t startNum = buf.find(*it);
+
+            	if (startNum != string::npos){
+            		size_t endNum = startNum + (*it).length();        	   
+    	            //thread_result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
+                    pthread_mutex_lock(&my_mutex);
+                    result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
+                    pthread_mutex_unlock(&my_mutex);
+    	        }
+    	}
+
+        pthread_mutex_lock(&my_mutex);
+        /*
+        for(multimap<MyKey, string, MyKeyCompare>::iterator mit = thread_result.begin(); mit != thread_result.end(); mit++) {
+            result.insert(make_pair(MyKey((mit->first).getStartNum(), (mit->first).getEndNum()), mit->second));
+        }*/
+        thread_done[tid] = true;
+        pthread_cond_wait(&cond, &my_mutex);
+        pthread_mutex_unlock(&my_mutex);
+    }
 
 	return NULL;
 }
@@ -104,6 +120,17 @@ int main(void) {
     }
     cout << "R" << std::endl;
 
+    for(long i = 0; i < NUM_THREAD; i++) {
+        if(pthread_create(&threads[i], 0, ThreadFunc, (void*)i) < 0) {
+            printf("pthread_create error!\n");
+            return 0;
+        }
+
+        while (thread_done[i] != false) {
+            pthread_yield();
+        }
+    }
+
     while(cin >> cmd){
         cin.get();
         getline(cin, buf);
@@ -113,17 +140,24 @@ int main(void) {
                     result.clear();
                     word_split_num = (word_list.size() / NUM_THREAD) + 1;
                     
-                    for(long i = 0; i < NUM_THREAD; i++) {
-                    	if(pthread_create(&threads[i], 0, ThreadFunc, (void*)i) < 0) {
-                    		printf("pthread_create error!\n");
-                			return 0;
-                    	}
+                    pthread_mutex_lock(&my_mutex);
+                    pthread_cond_broadcast(&cond);
+                    pthread_mutex_unlock(&my_mutex);
+                    
+                    while (1) {
+                        bool all_thread_done = true;
+                        for (int i = 0; i < NUM_THREAD; i++) {
+                            if (!thread_done[i]) {
+                                all_thread_done = false;
+                                break;
+                            }
+                        }
+                        if (all_thread_done) {
+                            break;
+                        }
+                        pthread_yield();
                     }
-
-                    for (int i = 0; i < NUM_THREAD; i++) {
-			pthread_join(threads[i], NULL);
-		    }
-
+        
                     multimap<MyKey, string, MyKeyCompare>::iterator it = result.begin();
                     for (int cnt = result.size(); cnt != 0; cnt--, it++){
                         cout << it->second;
@@ -146,6 +180,10 @@ int main(void) {
                 break;
         }
         
+    }
+
+    for (int i = 0; i < NUM_THREAD; i++) {
+        pthread_join(threads[i], NULL);
     }
     return 0;
 }
