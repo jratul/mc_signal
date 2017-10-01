@@ -48,6 +48,7 @@ int word_split_num;
 pthread_mutex_t my_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 bool thread_done[NUM_THREAD];
+bool is_done = false;
 
 void* ThreadFunc(void* arg) {
 	long tid = (long)arg;
@@ -57,7 +58,7 @@ void* ThreadFunc(void* arg) {
     pthread_cond_wait(&cond, &my_mutex);
     pthread_mutex_unlock(&my_mutex);
 
-    while(1) {
+    while(!is_done) {
         if((size_t)tid >= word_list.size() ||
         (size_t)tid * word_split_num >= word_list.size()) {
             pthread_mutex_lock(&my_mutex);
@@ -185,6 +186,11 @@ int main(void) {
         }
         
     }
+
+    is_done = true;
+    pthread_mutex_lock(&mutex);
+    pthread_cond_broadcast(&cond);
+    pthread_mutex_unlock(&mutex);
 
     for (int i = 0; i < NUM_THREAD; i++) {
         pthread_join(threads[i], NULL);
