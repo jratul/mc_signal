@@ -4,7 +4,8 @@
 #include<set>
 #include<string>
 #include<pthread.h>
-#define NUM_THREAD 36
+#define NUM_THREAD num_thread
+#define MAX_WORD 144
 using namespace std;
 
 class MyKey {
@@ -46,6 +47,7 @@ set<string> word_list;
 string buf;
 int word_split_num;
 pthread_mutex_t my_mutex = PTHREAD_MUTEX_INITIALIZER;
+int num_thread;
 
 void* ThreadFunc(void* arg) {
 	long tid = (long)arg;
@@ -90,7 +92,7 @@ void* ThreadFunc(void* arg) {
 int main(void) {
     int N;
     char cmd;
-    pthread_t threads[NUM_THREAD];
+    pthread_t* threads;
     std::ios::sync_with_stdio(false);
 
     cin >> N;
@@ -107,7 +109,14 @@ int main(void) {
         case 'Q': 
             {
                 result.clear();
+                if(word_list.size() > MAX_WORD) {
+                    num_thread = 144;
+                } else {
+                    num_thread = word_list.size();
+                }
                 word_split_num = (word_list.size() / NUM_THREAD) + 1;
+
+                threads = new pthread_t[num_thread];
 
                 for(long i = 0; i < NUM_THREAD; i++) {
                     if(pthread_create(&threads[i], 0, ThreadFunc, (void*)i) < 0) {
@@ -119,6 +128,8 @@ int main(void) {
                 for (int i = 0; i < NUM_THREAD; i++) {
                     pthread_join(threads[i], NULL);
                 }
+
+                delete [] threads;
 
                 multimap<MyKey, string, MyKeyCompare>::iterator it = result.begin();
                 for (int cnt = result.size(); cnt != 0; cnt--, it++){
