@@ -63,27 +63,28 @@ void* ThreadFunc(void* arg) {
 	set<string>::iterator it;
 
 	advance(start_iter, tid * word_split_num);
-	end_iter = start_iter;
-	advance(end_iter, word_split_num);
 
 	//cout << "this is thread : " << tid << endl;
 
 	if(tid == NUM_THREAD -1 || (word_list.size()) < (((size_t)tid+1) * word_split_num)) {
 		end_iter = word_list.end();
-	}
+	} else {
+        end_iter = start_iter;
+        advance(end_iter, word_split_num);
+    }
 
 	for(it = start_iter; it != end_iter; it++) {
 		size_t startNum = buf.find(*it);
 
-        	if (startNum != string::npos){
-        		size_t endNum = startNum + (*it).length();
-	        	pthread_mutex_lock(&my_mutex);
-        	    result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
-	            pthread_mutex_unlock(&my_mutex);
-	        }
-	}
+       if (startNum != string::npos){
+          size_t endNum = startNum + (*it).length();
+          pthread_mutex_lock(&my_mutex);
+          result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
+          pthread_mutex_unlock(&my_mutex);
+      }
+  }
 
-	return NULL;
+  return NULL;
 }
 
 int main(void) {
@@ -103,44 +104,44 @@ int main(void) {
         cin.get();
         getline(cin, buf);
         switch(cmd){
-            case 'Q': 
-                {
-                    result.clear();
-                    word_split_num = (word_list.size() / NUM_THREAD) + 1;
-                    
-                    for(long i = 0; i < NUM_THREAD; i++) {
-                    	if(pthread_create(&threads[i], 0, ThreadFunc, (void*)i) < 0) {
-                    		printf("pthread_create error!\n");
-                			return 0;
-                    	}
-                    }
+        case 'Q': 
+            {
+                result.clear();
+                word_split_num = (word_list.size() / NUM_THREAD) + 1;
 
-                    for (int i = 0; i < NUM_THREAD; i++) {
-			pthread_join(threads[i], NULL);
-		    }
-
-                    multimap<MyKey, string, MyKeyCompare>::iterator it = result.begin();
-                    for (int cnt = result.size(); cnt != 0; cnt--, it++){
-                        cout << it->second;
-                        if (cnt != 1){
-                            cout << "|";
-                        }
+                for(long i = 0; i < NUM_THREAD; i++) {
+                    if(pthread_create(&threads[i], 0, ThreadFunc, (void*)i) < 0) {
+                        printf("pthread_create error!\n");
+                        return 0;
                     }
-
-                    if(result.size() == 0) {
-                        cout << "-1";
-                    }
-                    cout << std::endl;
                 }
-                break;
-            case 'A':
-                word_list.insert(buf);
-                break;
-            case 'D':
-                word_list.erase(buf);
-                break;
+
+                for (int i = 0; i < NUM_THREAD; i++) {
+                    pthread_join(threads[i], NULL);
+                }
+
+                multimap<MyKey, string, MyKeyCompare>::iterator it = result.begin();
+                for (int cnt = result.size(); cnt != 0; cnt--, it++){
+                    cout << it->second;
+                    if (cnt != 1){
+                        cout << "|";
+                    }
+                }
+
+                if(result.size() == 0) {
+                    cout << "-1";
+                }
+                cout << std::endl;
+            }
+            break;
+        case 'A':
+            word_list.insert(buf);
+            break;
+        case 'D':
+            word_list.erase(buf);
+            break;
         }
-        
+
     }
     return 0;
 }
