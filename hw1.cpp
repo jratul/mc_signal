@@ -135,7 +135,9 @@ int main(void) {
         switch(cmd){
             case 'Q': 
                 {
+                    pthread_mutex_lock(&my_mutex);
                     result.clear();
+                    pthread_mutex_unlock(&my_mutex);
                     word_split_num = (word_list.size() / NUM_THREAD) + 1;
 
                     for(int i = 0;i<NUM_THREAD;i++) {
