@@ -83,7 +83,7 @@ void* ThreadFunc(void* arg) {
 	}
 
     pthread_mutex_lock(&my_mutex);
-    for(multimap<MyKey, string, MyKeyCompare>::iterator mit = result.begin(); mit != result.end(); mit++) {
+    for(multimap<MyKey, string, MyKeyCompare>::iterator mit = thread_result.begin(); mit != thread_result.end(); mit++) {
         result.insert(make_pair(MyKey((mit->first).getStartNum(), (mit->first).getEndNum()), mit->second));
     }
     pthread_mutex_unlock(&my_mutex);
