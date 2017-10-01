@@ -87,18 +87,17 @@ void* ThreadFunc(void* arg) {
 
             	if (startNum != string::npos){
             		size_t endNum = startNum + (*it).length();        	   
-    	            //thread_result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
-                    pthread_mutex_lock(&my_mutex);
+    	            thread_result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
+                    /*pthread_mutex_lock(&my_mutex);
                     result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
-                    pthread_mutex_unlock(&my_mutex);
+                    pthread_mutex_unlock(&my_mutex);*/
     	        }
     	}
 
         pthread_mutex_lock(&my_mutex);
-        /*
         for(multimap<MyKey, string, MyKeyCompare>::iterator mit = thread_result.begin(); mit != thread_result.end(); mit++) {
             result.insert(make_pair(MyKey((mit->first).getStartNum(), (mit->first).getEndNum()), mit->second));
-        }*/
+        }
         thread_done[tid] = true;
         pthread_cond_wait(&cond, &my_mutex);
         pthread_mutex_unlock(&my_mutex);
