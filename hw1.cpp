@@ -188,9 +188,9 @@ int main(void) {
     }
 
     is_done = true;
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&my_mutex);
     pthread_cond_broadcast(&cond);
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&my_mutex);
 
     for (int i = 0; i < NUM_THREAD; i++) {
         pthread_join(threads[i], NULL);
