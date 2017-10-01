@@ -57,50 +57,49 @@ void* ThreadFunc(void* arg) {
     pthread_cond_wait(&cond, &my_mutex);
     pthread_mutex_unlock(&my_mutex);
 
-	if((size_t)tid >= word_list.size() ||
-        (size_t)tid * word_split_num >= word_list.size()) {
-        pthread_mutex_lock(&my_mutex);
-        thread_done[tid] = true;
-        pthread_cond_wait(&cond, &my_mutex);
-        pthread_mutex_unlock(&my_mutex);
-		return NULL;
-	}
-
     while(1) {
-    	set<string>::iterator start_iter = word_list.begin();
-    	set<string>::iterator end_iter;
-    	set<string>::iterator it;
-        multimap<MyKey, string, MyKeyCompare> thread_result;
+        if((size_t)tid >= word_list.size() ||
+        (size_t)tid * word_split_num >= word_list.size()) {
+            pthread_mutex_lock(&my_mutex);
+            thread_done[tid] = true;
+            pthread_cond_wait(&cond, &my_mutex);
+            pthread_mutex_unlock(&my_mutex);
+        } else {
+        	set<string>::iterator start_iter = word_list.begin();
+        	set<string>::iterator end_iter;
+        	set<string>::iterator it;
+            multimap<MyKey, string, MyKeyCompare> thread_result;
 
-    	advance(start_iter, tid * word_split_num);
-    	end_iter = start_iter;
-    	advance(end_iter, word_split_num);
+        	advance(start_iter, tid * word_split_num);
+        	end_iter = start_iter;
+        	advance(end_iter, word_split_num);
 
-    	//cout << "this is thread : " << tid << endl;
+        	//cout << "this is thread : " << tid << endl;
 
-    	if(tid == NUM_THREAD -1 || (word_list.size()) < (((size_t)tid+1) * word_split_num)) {
-    		end_iter = word_list.end();
-    	}
+        	if(tid == NUM_THREAD -1 || (word_list.size()) < (((size_t)tid+1) * word_split_num)) {
+        		end_iter = word_list.end();
+        	}
 
-    	for(it = start_iter; it != end_iter; it++) {
-    		size_t startNum = buf.find(*it);
+        	for(it = start_iter; it != end_iter; it++) {
+        		size_t startNum = buf.find(*it);
 
-            	if (startNum != string::npos){
-            		size_t endNum = startNum + (*it).length();        	   
-    	            thread_result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
-                    /*pthread_mutex_lock(&my_mutex);
-                    result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
-                    pthread_mutex_unlock(&my_mutex);*/
-    	        }
-    	}
+                	if (startNum != string::npos){
+                		size_t endNum = startNum + (*it).length();        	   
+        	            thread_result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
+                        /*pthread_mutex_lock(&my_mutex);
+                        result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
+                        pthread_mutex_unlock(&my_mutex);*/
+        	        }
+        	}
 
-        pthread_mutex_lock(&my_mutex);
-        for(multimap<MyKey, string, MyKeyCompare>::iterator mit = thread_result.begin(); mit != thread_result.end(); mit++) {
-            result.insert(make_pair(MyKey((mit->first).getStartNum(), (mit->first).getEndNum()), mit->second));
+            pthread_mutex_lock(&my_mutex);
+            for(multimap<MyKey, string, MyKeyCompare>::iterator mit = thread_result.begin(); mit != thread_result.end(); mit++) {
+                result.insert(make_pair(MyKey((mit->first).getStartNum(), (mit->first).getEndNum()), mit->second));
+            }
+            thread_done[tid] = true;
+            pthread_cond_wait(&cond, &my_mutex);
+            pthread_mutex_unlock(&my_mutex);
         }
-        thread_done[tid] = true;
-        pthread_cond_wait(&cond, &my_mutex);
-        pthread_mutex_unlock(&my_mutex);
     }
 
 	return NULL;
