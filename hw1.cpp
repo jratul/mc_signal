@@ -61,6 +61,7 @@ void* ThreadFunc(void* arg) {
 	set<string>::iterator start_iter = word_list.begin();
 	set<string>::iterator end_iter;
 	set<string>::iterator it;
+    multimap<MyKey, string, MyKeyCompare> thread_result;
 
 	advance(start_iter, tid * word_split_num);
 	end_iter = start_iter;
@@ -76,12 +77,16 @@ void* ThreadFunc(void* arg) {
 		size_t startNum = buf.find(*it);
 
         	if (startNum != string::npos){
-        		size_t endNum = startNum + (*it).length();
-	        	pthread_mutex_lock(&my_mutex);
-        	    result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
-	            pthread_mutex_unlock(&my_mutex);
+        		size_t endNum = startNum + (*it).length();        	   
+	            thread_result.insert(make_pair(MyKey((int)startNum, (int)endNum), *it));
 	        }
 	}
+
+    pthread_mutex_lock(&my_mutex);
+    for(multimap<MyKey, string, MyKeyCompare>::iterator mit = result.begin(); mit != result.end(); mit++) {
+        result.insert(make_pair(MyKey((mit->first).getStartNum(), (mit->first).getEndNum()), mit->second));
+    }
+    pthread_mutex_unlock(&my_mutex);
 
 	return NULL;
 }
