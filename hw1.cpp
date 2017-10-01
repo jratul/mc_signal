@@ -109,10 +109,13 @@ int main(void) {
         case 'Q': 
             {
                 result.clear();
-                if(word_list.size() > MAX_WORD) {
-                    num_thread = 144;
+
+                if(word_list.size() < 1000) {
+                    num_thread = 36;
+                } else if(word_list.size() < 10000) {
+                    num_thread = 72;
                 } else {
-                    num_thread = word_list.size();
+                    num_thread = 144;
                 }
                 word_split_num = (word_list.size() / NUM_THREAD) + 1;
 
