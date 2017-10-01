@@ -138,6 +138,10 @@ int main(void) {
                 {
                     result.clear();
                     word_split_num = (word_list.size() / NUM_THREAD) + 1;
+
+                    for(int i = 0;i<NUM_THREAD;i++) {
+                        thread_done[i] = false;
+                    }
                     
                     pthread_mutex_lock(&my_mutex);
                     pthread_cond_broadcast(&cond);
